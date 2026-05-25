@@ -5,7 +5,7 @@ import urllib.parse
 import os
 
 def speak(text):
-    print(f"\n[Jarvis]: {text}")
+    print(f"\n[JANO]: {text}")
     subprocess.run(["termux-tts-speak", text])
 
 def listen():
@@ -22,7 +22,7 @@ def listen():
         return None
 
 def ask_ai(question):
-    prompt = f"Jarvis: {question}"
+    prompt = f"JANO: {question}"
     safe_prompt = urllib.parse.quote(prompt)
     url = f"https://text.pollinations.ai/{safe_prompt}"
     try:
@@ -32,7 +32,7 @@ def ask_ai(question):
         return "Connection failed."
 
 if __name__ == "__main__":
-    speak("System online. I am YOSEPH_JA, your voice assistant.")
+    speak("System online. I am JANO created by Yoseph, your voice assistant.")
     
     while True:
         user_speech = listen()
