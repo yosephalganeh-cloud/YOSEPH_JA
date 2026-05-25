@@ -32,7 +32,7 @@ def ask_ai(question):
         return "Connection failed."
 
 if __name__ == "__main__":
-    speak("System online. I am JANO created by Yoseph, your voice assistant.")
+    speak("System online. I am JANO AI created by Yoseph, your voice assistant.")
     
     while True:
         user_speech = listen()
