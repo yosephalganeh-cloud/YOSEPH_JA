@@ -19,6 +19,7 @@ RESET = "\033[0m"
 
 COLORS = [RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE]
 CONFIG_FILE = "config.json"
+selected_mode = "typing"  # Global variable to track input mode
 
 def display_dynamic_banner():
     """Generates and displays stylized, randomized terminal arts inspired by msfconsole."""
@@ -54,9 +55,10 @@ def display_dynamic_banner():
     print(f"========================================================{RESET}\n")
 
 def speak(text):
-    """Executes Text-to-Speech narration via the Termux subsystem bridge."""
+    """Displays text, and executes TTS only if input mode is voice."""
     print(f"\n{CYAN}[JANO_AI]: {text}{RESET}")
-    subprocess.run(["termux-tts-speak", text])
+    if selected_mode == "voice":
+        subprocess.run(["termux-tts-speak", text])
 
 def listen_voice():
     """Captures environmental speech audio and normalizes it to raw text."""
@@ -82,10 +84,10 @@ def get_user_input(input_mode):
         except (KeyboardInterrupt, EOFError):
             return "exit"
 
-def query_optimized_ai(question, gender, language):
+def query_optimized_ai(question, language):
     """Highly stable AI GET Request using Pollinations correct format."""
-    # Custom system instructions
-    system_prompt = f"You are JANO_AI, a highly smart assistant developed by Yoseph Alganeh. The User is {gender}. The Language is {language}. Crucial Rule: Always reply in the exact language the user used. Keep answers direct, accurate, and fast."
+    # Custom system instructions (Gender removed)
+    system_prompt = f"You are JANO_AI, a highly smart assistant developed by Yoseph Alganeh. The Language is {language}. Crucial Rule: Always reply in the exact language the user used. Keep answers direct, accurate, and fast."
     
     # URL Encoding for safety
     safe_question = urllib.parse.quote(question)
@@ -135,9 +137,9 @@ def load_stored_profile():
             return None
     return None
 
-def save_profile_to_disk(gender, language):
+def save_profile_to_disk(language):
     """Writes persistent profile configurations to local storage file."""
-    profile_data = {"gender": gender, "language": language}
+    profile_data = {"language": language}
     with open(CONFIG_FILE, 'w') as file_stream:
         json.dump(profile_data, file_stream, indent=4)
 
@@ -145,22 +147,7 @@ def run_onboarding_setup(input_mode):
     """Onboarding setup supporting advanced flexible matching dictionary strings."""
     print(f"{YELLOW}[Setup Wizard Initialization]{RESET}")
     
-    # 1. Gender Selection
-    speak("Please state or type your gender. Enter M for Male or F for Female.")
-    gender_identity = "Male"
-    while True:
-        raw_ans = get_user_input(input_mode)
-        if raw_ans:
-            val = raw_ans.lower().strip()
-            if val in ["m", "male", "mail", "man", "boy", "ወንድ"]:
-                gender_identity = "Male"
-                break
-            elif val in ["f", "female", "girl", "woman", "ሴት"]:
-                gender_identity = "Female"
-                break
-        print(f"{RED}Invalid input. Please enter M or F.{RESET}")
-
-    # 2. Language Selection
+    # Language Selection (Gender Selection is removed)
     speak("Please choose your system language preference. Enter E for English or A for Amharic.")
     language_track = "English"
     while True:
@@ -175,9 +162,9 @@ def run_onboarding_setup(input_mode):
                 break
         print(f"{RED}Invalid input. Please enter E or A.{RESET}")
 
-    save_profile_to_disk(gender_identity, language_track)
+    save_profile_to_disk(language_track)
     speak("User setup configuration saved successfully.")
-    return gender_identity, language_track
+    return language_track
 
 if __name__ == "__main__":
     display_dynamic_banner()
@@ -186,7 +173,6 @@ if __name__ == "__main__":
     print(f" [{GREEN}T{RESET}] Typing Keyboard Interface Mode")
     print(f" [{GREEN}V{RESET}] Voice Speech Interface Mode")
     
-    selected_mode = "typing"
     while True:
         mode_token = input(f"\n{BLUE}Select Interface Mode [T/V]: {RESET}").lower().strip()
         if mode_token in ["t", "typing"]:
@@ -199,11 +185,10 @@ if __name__ == "__main__":
 
     stored_profile = load_stored_profile()
     if stored_profile:
-        user_gender = stored_profile.get("gender", "Male")
         user_language = stored_profile.get("language", "English")
-        print(f"{GREEN}[Profile Loaded Memory]: Gender={user_gender} | Language={user_language}{RESET}")
+        print(f"{GREEN}[Profile Loaded Memory]: Language={user_language}{RESET}")
     else:
-        user_gender, user_language = run_onboarding_setup(selected_mode)
+        user_language = run_onboarding_setup(selected_mode)
 
     speak("JANO AI Online. Ready for your commands.")
 
@@ -250,7 +235,7 @@ if __name__ == "__main__":
         # STABLE CORE AI INFERENCE FASTRUN
         # ========================================================
         else:
-            ai_inference_response = query_optimized_ai(cmd_string, user_gender, user_language)
+            ai_inference_response = query_optimized_ai(cmd_string, user_language)
             speak(ai_inference_response)
         
         time.sleep(0.2)
