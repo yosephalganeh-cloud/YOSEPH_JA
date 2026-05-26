@@ -1,10 +1,10 @@
 # JANO_AI -Voice AI Assistant
-A voice-controlled AI assistant for Termux, powered by Python and Pollinations AI.
+A voice && type -controlled AI assistant for Termux,powered by Yoseph Alganeh,  Python and Pollinations AI.
 
 ## Features
 - Voice-to-Text interaction.
 - Text-to-Speech responses.
-- Open applications via voice commands.
+- Open applications via voice && type commands.
 - Lightweight and API-key-free.
 
 ## Prerequisites
