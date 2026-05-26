@@ -1,6 +1,5 @@
 import subprocess
 import requests
-import time
 import urllib.parse
 import json
 
@@ -18,88 +17,103 @@ def listen():
             print(f"[You]: {user_text}")
             return user_text
         return None
-    except:
+    except Exception:
         return None
 
 def ask_ai(question):
-    url = f"https://text.pollinations.ai/{urllib.parse.quote(question)}"
+    # ጥያቄን ወደ AI መላክ (ለአጭር መልስ መመሪያ ተሰጥቶታል)
+    prompt = f"You are JANO_AI. Give short answers. Question: {question}"
+    url = f"https://text.pollinations.ai/{urllib.parse.quote(prompt)}"
     try:
         response = requests.get(url)
-        return response.text if response.status_code == 200 else "I am having trouble connecting to the network."
-    except:
-        return "Network error occurred."
-
-# --- Smart Termux API Functions ---
-def get_battery():
-    try:
-        out = subprocess.check_output(["termux-battery-status"], text=True)
-        data = json.loads(out)
-        perc = data.get('percentage', 'unknown')
-        stat = data.get('status', 'unknown').lower()
-        return f"Sir, your battery is at {perc} percent and is currently {stat}."
-    except:
-        return "I could not read the battery status."
-
-def get_wifi():
-    try:
-        out = subprocess.check_output(["termux-wifi-connectioninfo"], text=True)
-        data = json.loads(out)
-        if data.get("supplicant_state") == "COMPLETED":
-            ssid = data.get('ssid', 'unknown').replace('"', '')
-            return f"You are connected to a WiFi network named {ssid}."
-        return "WiFi is not connected."
-    except:
-        return "I could not check the WiFi status."
+        return response.text if response.status_code == 200 else "I am offline right now."
+    except Exception:
+        return "Network connection failed."
 
 if __name__ == "__main__":
-    speak("System online. I am JANO_AI, ready for all commands.")
+    speak("System fully operational. I am JANO_AI. created by Yoseph Alganeh. How can I assist you today?")
     
     while True:
-        speech = listen()
-        if not speech: continue
-        cmd = speech.lower()
+        cmd_raw = listen()
+        
+        # ድምፅ ካልሰማ ወዲያውኑ ወደ ማዳመጥ (listen) ይመለሳል
+        if not cmd_raw:
+            continue
+            
+        cmd = cmd_raw.lower()
 
-        # 1. Hardware & Sensors Commands
-        if "battery" in cmd:
-            speak(get_battery())
-            
-        elif "wifi" in cmd or "network" in cmd:
-            speak(get_wifi())
-            
-        elif "torch on" in cmd or "flashlight on" in cmd:
-            subprocess.run(["termux-torch", "on"])
-            speak("Flashlight is activated.")
-            
-        elif "torch off" in cmd or "flashlight off" in cmd:
-            subprocess.run(["termux-torch", "off"])
-            speak("Flashlight is deactivated.")
-            
-        elif "take photo" in cmd or "take a picture" in cmd:
-            speak("Taking a photo now.")
-            # ፎቶ አንስቶ photo.jpg በሚል ስም ያስቀምጠዋል
-            subprocess.run(["termux-camera-photo", "photo.jpg"])
-            speak("Photo saved as photo.jpg in your current directory.")
-            
-        elif "vibrate" in cmd:
-            speak("Vibrating the device.")
-            # ስልኩን ለ 1000 ሚሊ ሰከንድ (1 ሰከንድ) ያንቀጠቅጠዋል
-            subprocess.run(["termux-vibrate", "-f", "-d", "1000"])
-
-        elif "read clipboard" in cmd or "what did i copy" in cmd:
-            try:
-                text = subprocess.check_output(["termux-clipboard-get"], text=True)
-                speak(f"Your clipboard says: {text}")
-            except:
-                speak("Your clipboard is empty.")
-
-        # 2. System Exit Command
-        elif "stop" in cmd or "sleep" in cmd:
-            speak("Shutting down JANO_AI. Have a good day!")
+        # --------------------------------------------------------
+        # 1. ማቆሚያ ትዕዛዝ (Stop Command)
+        # --------------------------------------------------------
+        if "stop" in cmd or "exit" in cmd or "shut down" in cmd:
+            speak("Shutting down all systems. Goodbye sir!")
             break
 
-        # 3. AI Assistant Logic (ከላይ ያሉት ትዕዛዞች ካልሆኑ ወደ AI ይላካል)
-        else:
-            ai_response = ask_ai(speech)
-            speak(ai_response)
+        # --------------------------------------------------------
+        # 2. የ Termux API ትዕዛዞች (System Controls)
+        # --------------------------------------------------------
         
-        time.sleep(1.5)
+        # የባትሪ ሁኔታ
+        elif "battery" in cmd:
+            try:
+                result = subprocess.check_output(["termux-battery-status"], text=True)
+                data = json.loads(result)
+                speak(f"Your battery is at {data['percentage']} percent.")
+            except Exception:
+                speak("I couldn't read the battery status.")
+                
+        # የባትሪ መብራት ማብራት
+        elif "torch on" in cmd or "flashlight on" in cmd:
+            subprocess.run(["termux-torch", "on"])
+            speak("Flashlight activated.")
+            
+        # የባትሪ መብራት ማጥፋት
+        elif "torch off" in cmd or "flashlight off" in cmd:
+            subprocess.run(["termux-torch", "off"])
+            speak("Flashlight deactivated.")
+
+        # ክሊፕቦርድ ማንበብ (Copy የተደረገ ጽሑፍ)
+        elif "read clipboard" in cmd or "clipboard" in cmd:
+            try:
+                text = subprocess.check_output(["termux-clipboard-get"], text=True)
+                if text.strip():
+                    speak(f"Your clipboard says: {text}")
+                else:
+                    speak("Your clipboard is empty.")
+            except Exception:
+                speak("Could not access clipboard.")
+
+        # ዋይፋይ (WiFi) ማብራት
+        elif "wifi on" in cmd or "turn on wifi" in cmd:
+            subprocess.run(["termux-wifi-enable", "true"])
+            speak("Wi-Fi has been turned on.")
+
+        # ዋይፋይ (WiFi) ማጥፋት
+        elif "wifi off" in cmd or "turn off wifi" in cmd:
+            subprocess.run(["termux-wifi-enable", "false"])
+            speak("Wi-Fi has been turned off.")
+
+        # ፎቶ ማንሳት (የስልኩን ካሜራ በመጠቀም)
+        elif "take a photo" in cmd or "take a picture" in cmd:
+            speak("Taking a photo now.")
+            # ፎቶውን 'photo.jpg' በሚል ስም ያስቀምጠዋል
+            subprocess.run(["termux-camera-photo", "photo.jpg"])
+            speak("Photo captured and saved successfully.")
+
+        # ያለህበትን ቦታ (Location) ማወቅ
+        elif "location" in cmd or "where am i" in cmd:
+            speak("Fetching GPS coordinates. Please wait.")
+            try:
+                loc = subprocess.check_output(["termux-location"], text=True)
+                loc_data = json.loads(loc)
+                speak(f"Your latitude is {loc_data['latitude']} and longitude is {loc_data['longitude']}")
+            except Exception:
+                speak("I could not get the GPS location. Make sure location services are on.")
+
+        # --------------------------------------------------------
+        # 3. AI ን መጠየቅ (General AI Query)
+        # --------------------------------------------------------
+        else:
+            # ሌላ ማንኛውም ጥያቄ ከሆነ (ምንም ትዕዛዝ ካልሆነ) ወደ AI ሰርቨር ይላካል
+            ai_answer = ask_ai(cmd_raw)
+            speak(ai_answer)
