@@ -82,10 +82,10 @@ def get_user_input(input_mode):
         except (KeyboardInterrupt, EOFError):
             return "exit"
 
-def query_optimized_ai(question, gender, language):
-    """Highly stable AI GET Request using Pollinations correct format."""
-    # Custom system instructions
-    system_prompt = f"You are JANO_AI, a highly smart assistant developed by Yoseph Alganeh. The User is {gender}. The Language is {language}. Crucial Rule: Always reply in the exact language the user used. Keep answers direct, accurate, and fast."
+def query_optimized_ai(question, gender):
+    """Highly stable AI GET Request strictly set to English."""
+    # Custom system instructions - Strictly English
+    system_prompt = f"You are JANO_AI, a highly smart assistant developed by Yoseph Alganeh. The User is {gender}. Crucial Rule: Always reply strictly in English. Keep answers direct, accurate, and fast."
     
     # URL Encoding for safety
     safe_question = urllib.parse.quote(question)
@@ -95,15 +95,16 @@ def query_optimized_ai(question, gender, language):
     url = f"https://text.pollinations.ai/{safe_question}?system={safe_system}"
     
     try:
-        response = requests.get(url, timeout=20)
+        # Increased timeout to 30 to handle complex questions without crashing
+        response = requests.get(url, timeout=30)
         if response.status_code == 200:
             return response.text.strip()
         else:
             print(f"{RED}[Debug Error]: API returned status {response.status_code}{RESET}")
-            return "ይቅርታ፣ አሁን ላይ የ AI ሰርቨሩ ስራ በዝቶበታል። እባክህ ትንሽ ቆይተህ ሞክር።"
+            return f"Sorry, the AI server is currently busy (Status {response.status_code}). Please try again."
     except Exception as e:
         print(f"{RED}[Network Error]: {e}{RESET}")
-        return "ይቅርታ፣ ኢንተርኔት ወይም ሰርቨር አልሰራ እያለ ነው።"
+        return "Network Error or Timeout. Please check your internet connection and try again."
 
 def get_battery_metrics():
     """Pulls current charging, voltage, and health attributes via Termux JSON blocks."""
@@ -135,14 +136,14 @@ def load_stored_profile():
             return None
     return None
 
-def save_profile_to_disk(gender, language):
+def save_profile_to_disk(gender):
     """Writes persistent profile configurations to local storage file."""
-    profile_data = {"gender": gender, "language": language}
+    profile_data = {"gender": gender}
     with open(CONFIG_FILE, 'w') as file_stream:
         json.dump(profile_data, file_stream, indent=4)
 
 def run_onboarding_setup(input_mode):
-    """Onboarding setup supporting advanced flexible matching dictionary strings."""
+    """Simplified onboarding setup for English-only system."""
     print(f"{YELLOW}[Setup Wizard Initialization]{RESET}")
     
     # 1. Gender Selection
@@ -152,32 +153,17 @@ def run_onboarding_setup(input_mode):
         raw_ans = get_user_input(input_mode)
         if raw_ans:
             val = raw_ans.lower().strip()
-            if val in ["m", "male", "mail", "man", "boy", "ወንድ"]:
+            if val in ["m", "male", "mail", "man", "boy"]:
                 gender_identity = "Male"
                 break
-            elif val in ["f", "female", "girl", "woman", "ሴት"]:
+            elif val in ["f", "female", "girl", "woman"]:
                 gender_identity = "Female"
                 break
         print(f"{RED}Invalid input. Please enter M or F.{RESET}")
 
-    # 2. Language Selection
-    speak("Please choose your system language preference. Enter E for English or A for Amharic.")
-    language_track = "English"
-    while True:
-        raw_ans = get_user_input(input_mode)
-        if raw_ans:
-            val = raw_ans.lower().strip()
-            if val in ["e", "english", "inglish", "እንግሊዝኛ"]:
-                language_track = "English"
-                break
-            elif val in ["a", "amharic", "amaric", "አማርኛ"]:
-                language_track = "Amharic"
-                break
-        print(f"{RED}Invalid input. Please enter E or A.{RESET}")
-
-    save_profile_to_disk(gender_identity, language_track)
+    save_profile_to_disk(gender_identity)
     speak("User setup configuration saved successfully.")
-    return gender_identity, language_track
+    return gender_identity
 
 if __name__ == "__main__":
     display_dynamic_banner()
@@ -200,10 +186,9 @@ if __name__ == "__main__":
     stored_profile = load_stored_profile()
     if stored_profile:
         user_gender = stored_profile.get("gender", "Male")
-        user_language = stored_profile.get("language", "English")
-        print(f"{GREEN}[Profile Loaded Memory]: Gender={user_gender} | Language={user_language}{RESET}")
+        print(f"{GREEN}[Profile Loaded Memory]: Gender={user_gender}{RESET}")
     else:
-        user_gender, user_language = run_onboarding_setup(selected_mode)
+        user_gender = run_onboarding_setup(selected_mode)
 
     speak("JANO AI Online. Ready for your commands.")
 
@@ -217,17 +202,17 @@ if __name__ == "__main__":
         # ========================================================
         # SYSTEM OPERATIONS INTERFACES (Termux APIs)
         # ========================================================
-        if cmd_normalized in ["battery", "ባትሪ"]:
+        if cmd_normalized in ["battery"]:
             speak(get_battery_metrics())
             
-        elif cmd_normalized in ["wifi", "ዋይፋይ"]:
+        elif cmd_normalized in ["wifi"]:
             speak(get_wifi_metrics())
         
-        elif cmd_normalized in ["torch on", "flashlight on", "መብራት አብራ"]:
+        elif cmd_normalized in ["torch on", "flashlight on"]:
             subprocess.run(["termux-torch", "on"])
             speak("Flashlight turned on.")
             
-        elif cmd_normalized in ["torch off", "flashlight off", "መብራት አጥፋ"]:
+        elif cmd_normalized in ["torch off", "flashlight off"]:
             subprocess.run(["termux-torch", "off"])
             speak("Flashlight turned off.")
 
@@ -238,11 +223,11 @@ if __name__ == "__main__":
             except:
                 speak("Unable to interface with device clipboard.")
                 
-        elif cmd_normalized in ["vibrate", "ንዘር"]:
+        elif cmd_normalized in ["vibrate"]:
             speak("Vibrating hardware system.")
             subprocess.run(["termux-vibrate", "-d", "1000"])
 
-        elif cmd_normalized in ["stop", "exit", "quit", "አቁም"]:
+        elif cmd_normalized in ["stop", "exit", "quit", "clear"]:
             speak("Shutting down JANO AI. Goodbye!")
             break
 
@@ -250,7 +235,7 @@ if __name__ == "__main__":
         # STABLE CORE AI INFERENCE FASTRUN
         # ========================================================
         else:
-            ai_inference_response = query_optimized_ai(cmd_string, user_gender, user_language)
+            ai_inference_response = query_optimized_ai(cmd_string, user_gender)
             speak(ai_inference_response)
         
         time.sleep(0.2)
