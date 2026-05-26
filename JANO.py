@@ -26,7 +26,6 @@ def display_dynamic_banner():
     primary_color = random.choice(COLORS)
     accent_color = random.choice([c for c in COLORS if c != primary_color])
     
-    # Selection of artistic terminal layouts requested by user
     banner_block = f"""
 {primary_color}    ████████╗ █████╗ ███╗   ██╗ ██████╗       █████╗ ██╗
     ╚══██╔══╝██╔══██╗████╗  ██║██╔═══██╗     ██╔══██╗██║
@@ -84,27 +83,28 @@ def get_user_input(input_mode):
             return "exit"
 
 def query_optimized_ai(question, gender, language):
-    """Forwards prompts to the inference engine with precise system routing rules."""
-    context_payload = (
-        f"System Constraint: Your identity is JANO_AI. The user interacting with you is a {gender}. "
-        f"User preferred language track is {language}. "
-        f"Handling Directive: If user prompt is provided in Amharic, translate thoughts and reply exclusively in clear Amharic. "
-        f"If user prompt is in English, reply directly in natural English. Keep execution fast, clear, and highly focused. "
-        f"User input query string: {question}"
-    )
-    encoded_url = f"https://text.pollinations.ai/{urllib.parse.quote(context_payload)}"
+    """Forwards prompts to the high-speed inference engine safely without URL overflow."""
+    # Cleaner, optimized context injection to protect against HTTP 400 Bad Requests
+    prompt_payload = f"[Identity: JANO_AI. User: {gender}. Language: {language}. Rule: If prompt is in Amharic reply in Amharic, if English reply in English] {question}"
+    encoded_prompt = urllib.parse.quote(prompt_payload)
+    url = f"https://text.pollinations.ai/{encoded_prompt}"
+    
     try:
-        response = requests.get(encoded_url, timeout=10)
-        return response.text if response.status_code == 200 else "Inference Engine Link Error."
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(url, headers=headers, timeout=15)
+        if response.status_code == 200:
+            return response.text.strip()
+        else:
+            return f"AI Engine is busy (Error {response.status_code}). Please ask me again!"
     except:
-        return "Network connection timeout error encountered."
+        return "Network timeout. Please verify your internet connection connection."
 
 def get_battery_metrics():
     """Pulls current charging, voltage, and health attributes via Termux JSON blocks."""
     try:
         raw_output = subprocess.check_output(["termux-battery-status"], text=True)
         json_data = json.loads(raw_output)
-        return f"Battery core capacity is at {json_data['percentage']} percent. Operational status: {json_data['status']}."
+        return f"Battery capacity is at {json_data['percentage']}% and status is {json_data['status']}."
     except:
         return "Unable to parse device battery attributes."
 
@@ -114,10 +114,10 @@ def get_wifi_metrics():
         raw_output = subprocess.check_output(["termux-wifi-connectioninfo"], text=True)
         json_data = json.loads(raw_output)
         if json_data.get("supplicant_state") == "COMPLETED":
-            return f"Network link established. SSID Broadcast name: {json_data.get('ssid', 'Hidden Network')}."
-        return "Wireless system state identifies no open connection bridges currently."
+            return f"Connected to Wi-Fi. Network SSID: {json_data.get('ssid', 'Hidden')}."
+        return "Your device is not connected to any active Wi-Fi networks."
     except:
-        return "Hardware interface failed to pull active Wi-Fi states."
+        return "Hardware interface failed to read Wi-Fi configurations."
 
 def load_stored_profile():
     """Loads saved profiles directly from persistent disk configuration space."""
@@ -130,53 +130,52 @@ def load_stored_profile():
     return None
 
 def save_profile_to_disk(gender, language):
-    """Writes persistent system files so structural parameters are saved across boots."""
+    """Writes persistent profile configurations to local storage file."""
     profile_data = {"gender": gender, "language": language}
     with open(CONFIG_FILE, 'w') as file_stream:
         json.dump(profile_data, file_stream, indent=4)
 
 def run_onboarding_setup(input_mode):
-    """Initial onboarding wizard designed to handle character shorthand input configurations smoothly."""
+    """Onboarding setup supporting advanced flexible matching dictionary strings."""
     print(f"{YELLOW}[Setup Wizard Initialization]{RESET}")
     
-    # 1. Gender Registration Logic
-    speak("Please state or type your gender orientation. Enter M for Male or F for Female.")
-    gender_identity = "Unknown"
+    # 1. Smarter Gender Input Tracking Logic
+    speak("Please state or type your gender. Enter M for Male or F for Female.")
+    gender_identity = "Male"
     while True:
         raw_ans = get_user_input(input_mode)
         if raw_ans:
-            normalized = raw_ans.lower().strip()
-            if normalized in ["m", "male", "ወንድ"]:
+            val = raw_ans.lower().strip()
+            if val in ["m", "male", "mail", "man", "boy", "ወንድ"]:
                 gender_identity = "Male"
                 break
-            elif normalized in ["f", "female", "ሴት"]:
+            elif val in ["f", "female", "girl", "woman", "ሴት"]:
                 gender_identity = "Female"
                 break
-        print(f"{RED}Invalid shorthand code. Please type or say 'M' or 'F'.{RESET}")
+        print(f"{RED}Invalid shorthand code. Try again.{RESET}")
 
-    # 2. Language Tracking Logic
+    # 2. Smarter Language Choice Tracking Logic
     speak("Please choose your system language preference. Enter E for English or A for Amharic.")
     language_track = "English"
     while True:
         raw_ans = get_user_input(input_mode)
         if raw_ans:
-            normalized = raw_ans.lower().strip()
-            if normalized in ["e", "english", "እንግሊዝኛ"]:
+            val = raw_ans.lower().strip()
+            if val in ["e", "english", "inglish", "እንግሊዝኛ"]:
                 language_track = "English"
                 break
-            elif normalized in ["a", "amharic", "አማርኛ"]:
+            elif val in ["a", "amharic", "amaric", "አማርኛ"]:
                 language_track = "Amharic"
                 break
-        print(f"{RED}Invalid shorthand code. Please type or say 'E' or 'A'.{RESET}")
+        print(f"{RED}Invalid shorthand code. Try again.{RESET}")
 
     save_profile_to_disk(gender_identity, language_track)
-    speak("User settings successfully locked to application configuration disk.")
+    speak("User setup configuration saved successfully.")
     return gender_identity, language_track
 
 if __name__ == "__main__":
     display_dynamic_banner()
     
-    # Interactive Engine Selector Prompt at every boot lifecycle
     print(f"{YELLOW}Select Operational Input Interface Mode:{RESET}")
     print(f" [{GREEN}T{RESET}] Typing Keyboard Interface Mode")
     print(f" [{GREEN}V{RESET}] Voice Speech Interface Mode")
@@ -186,42 +185,31 @@ if __name__ == "__main__":
         mode_token = input(f"\n{BLUE}Select Interface Mode [T/V]: {RESET}").lower().strip()
         if mode_token in ["t", "typing"]:
             selected_mode = "typing"
-            print(f"{GREEN}Keyboard Interaction Mode verified.{RESET}")
             break
         elif mode_token in ["v", "voice"]:
             selected_mode = "voice"
-            print(f"{GREEN}Voice Processing Mode verified.{RESET}")
             break
-        print(f"{RED}Error: Shorthand character not recognized. Enter 'T' or 'V'.{RESET}")
+        print(f"{RED}Error: Code not recognized. Enter 'T' or 'V'.{RESET}")
 
-    # Persistent user attribute memory discovery sequence
     stored_profile = load_stored_profile()
     if stored_profile:
         user_gender = stored_profile.get("gender", "Male")
         user_language = stored_profile.get("language", "English")
-        print(f"{GREEN}[Profile Restored]: Identity={user_gender} | Language Preference={user_language}{RESET}")
+        print(f"{GREEN}[Profile Loaded Memory]: Gender={user_gender} | Language={user_language}{RESET}")
     else:
         user_gender, user_language = run_onboarding_setup(selected_mode)
 
-    speak("JANO AI Online. Command sequence loop is fully initialized.")
+    speak("JANO AI Online. Ready for your commands.")
 
-    # Main continuous processing loop execution block
     while True:
-        if selected_mode == "voice":
-            user_speech = get_user_input("voice")
-            if not user_speech:
-                continue
-            cmd_string = user_speech
-        else:
-            user_type = get_user_input("typing")
-            if not user_type:
-                continue
-            cmd_string = user_type
+        cmd_string = get_user_input(selected_mode)
+        if not cmd_string:
+            continue
 
         cmd_normalized = cmd_string.lower().strip()
 
         # ========================================================
-        # TERMUX SUBSYSTEM INTERACTION BLOCK
+        # SYSTEM OPERATIONS INTERFACES (Termux APIs)
         # ========================================================
         if cmd_normalized in ["battery", "ባትሪ"]:
             speak(get_battery_metrics())
@@ -229,35 +217,34 @@ if __name__ == "__main__":
         elif cmd_normalized in ["wifi", "ዋይፋይ"]:
             speak(get_wifi_metrics())
         
-        elif cmd_normalized in ["torch on", "flashlight on", "መብራት አብራ"]:
+        elif cmd_normalized in ["torch on", "flashlight on", "မብራት አብራ"]:
             subprocess.run(["termux-torch", "on"])
-            speak("Hardware system relay activated flashlight.")
+            speak("Flashlight turned on.")
             
         elif cmd_normalized in ["torch off", "flashlight off", "መብራት አጥፋ"]:
             subprocess.run(["termux-torch", "off"])
-            speak("Hardware system relay deactivated flashlight.")
+            speak("Flashlight turned off.")
 
         elif cmd_normalized == "clipboard":
             try:
                 clipboard_text = subprocess.check_output(["termux-clipboard-get"], text=True).strip()
-                speak(f"Active clipboard buffer string: {clipboard_text if clipboard_text else 'Empty'}")
+                speak(f"Clipboard payload context: {clipboard_text if clipboard_text else 'Empty'}")
             except:
-                speak("Unable to interface with device clipboard channel.")
+                speak("Unable to interface with device clipboard.")
                 
         elif cmd_normalized in ["vibrate", "ንዘር"]:
-            speak("Initiating physical device structural vibration pulse.")
+            speak("Vibrating hardware system.")
             subprocess.run(["termux-vibrate", "-d", "1000"])
 
         elif cmd_normalized in ["stop", "exit", "quit", "አቁም"]:
-            speak("Closing all interface connections. Deactivating JANO AI runtime environment.")
+            speak("Shutting down JANO AI. Goodbye!")
             break
 
         # ========================================================
-        # HIGH-SPEED INFERENCE SYSTEM ROUTING FALLBACK
+        # STABLE CORE AI INFERENCE FASTRUN
         # ========================================================
         else:
             ai_inference_response = query_optimized_ai(cmd_string, user_gender, user_language)
             speak(ai_inference_response)
         
-        # Immediate micro-delay reset to immediately keep listening or typing
-        time.readlines if False else time.sleep(0.2)
+        time.sleep(0.1)
