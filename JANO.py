@@ -83,21 +83,39 @@ def get_user_input(input_mode):
             return "exit"
 
 def query_optimized_ai(question, gender, language):
-    """Forwards prompts to the high-speed inference engine safely without URL overflow."""
-    # Cleaner, optimized context injection to protect against HTTP 400 Bad Requests
-    prompt_payload = f"[Identity: JANO_AI. User: {gender}. Language: {language}. Rule: If prompt is in Amharic reply in Amharic, if English reply in English] {question}"
-    encoded_prompt = urllib.parse.quote(prompt_payload)
-    url = f"https://text.pollinations.ai/{encoded_prompt}"
+    """Forwards prompts to the high-speed inference engine using reliable POST method with GET fallback."""
+    url = "https://text.pollinations.ai/openai"
+    payload = {
+        "model": "openai",
+        "messages": [
+            {
+                "role": "system", 
+                "content": f"You are JANO_AI, a highly smart assistant developed by Yoseph Alganeh. User is {gender}. Language is {language}. Crucial Rule: If user speaks in Amharic, respond strictly in Amharic. If in English, respond in English. Keep it direct and fast."
+            },
+            {"role": "user", "content": question}
+        ]
+    }
     
     try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url, headers=headers, timeout=15)
+        # Method 1: Robust JSON POST Request
+        response = requests.post(url, json=payload, timeout=12)
         if response.status_code == 200:
-            return response.text.strip()
-        else:
-            return f"AI Engine is busy (Error {response.status_code}). Please ask me again!"
+            res_data = response.json()
+            return res_data['choices'][0]['message']['content'].strip()
     except:
-        return "Network timeout. Please verify your internet connection connection."
+        pass
+        
+    try:
+        # Method 2: Smart GET Fallback if POST fails
+        clean_prompt = f"[User: {gender}, Lang: {language}] {question}"
+        backup_url = f"https://text.pollinations.ai/{urllib.parse.quote(clean_prompt)}"
+        backup_res = requests.get(backup_url, timeout=10)
+        if backup_res.status_code == 200:
+            return backup_res.text.strip()
+    except:
+        pass
+
+    return "ይቅርታ፣ የኔትወርክ መቆራረጥ አጋጥሞኛል። እባክህ እንደገና ጠይቀኝ።"
 
 def get_battery_metrics():
     """Pulls current charging, voltage, and health attributes via Termux JSON blocks."""
@@ -139,7 +157,7 @@ def run_onboarding_setup(input_mode):
     """Onboarding setup supporting advanced flexible matching dictionary strings."""
     print(f"{YELLOW}[Setup Wizard Initialization]{RESET}")
     
-    # 1. Smarter Gender Input Tracking Logic
+    # 1. Gender Selection
     speak("Please state or type your gender. Enter M for Male or F for Female.")
     gender_identity = "Male"
     while True:
@@ -152,9 +170,9 @@ def run_onboarding_setup(input_mode):
             elif val in ["f", "female", "girl", "woman", "ሴት"]:
                 gender_identity = "Female"
                 break
-        print(f"{RED}Invalid shorthand code. Try again.{RESET}")
+        print(f"{RED}Invalid input. Please enter M or F.{RESET}")
 
-    # 2. Smarter Language Choice Tracking Logic
+    # 2. Language Selection
     speak("Please choose your system language preference. Enter E for English or A for Amharic.")
     language_track = "English"
     while True:
@@ -167,7 +185,7 @@ def run_onboarding_setup(input_mode):
             elif val in ["a", "amharic", "amaric", "አማርኛ"]:
                 language_track = "Amharic"
                 break
-        print(f"{RED}Invalid shorthand code. Try again.{RESET}")
+        print(f"{RED}Invalid input. Please enter E or A.{RESET}")
 
     save_profile_to_disk(gender_identity, language_track)
     speak("User setup configuration saved successfully.")
@@ -217,7 +235,7 @@ if __name__ == "__main__":
         elif cmd_normalized in ["wifi", "ዋይፋይ"]:
             speak(get_wifi_metrics())
         
-        elif cmd_normalized in ["torch on", "flashlight on", "မብራት አብራ"]:
+        elif cmd_normalized in ["torch on", "flashlight on", "መብራት አብራ"]:
             subprocess.run(["termux-torch", "on"])
             speak("Flashlight turned on.")
             
@@ -247,4 +265,4 @@ if __name__ == "__main__":
             ai_inference_response = query_optimized_ai(cmd_string, user_gender, user_language)
             speak(ai_inference_response)
         
-        time.sleep(0.1)
+        time.sleep(0.2)
