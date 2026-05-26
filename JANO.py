@@ -69,32 +69,35 @@ def get_user_input(input_mode):
             return "exit"
 
 def query_optimized_ai(question, gender):
-    """Highly stable, ultra-fast English-only AI inference."""
-    system_prompt = f"You are JANO_AI, a highly smart assistant developed by Yoseph Alganeh. The User gender is {gender}. Crucial Rule: Always respond strictly in English. Keep answers direct, concise, and ultra-fast. Do not use bold markdown asterisks."
+    """Ultra-stable multi-model fallback AI pipeline to completely bypass rate limits."""
+    system_prompt = f"You are JANO_AI, a highly smart assistant developed by Yoseph Alganeh. The User gender is {gender}. Rule: Respond strictly in English language. Keep answers highly direct, short, and clean. Never use markdown bold asterisks."
     
     safe_question = urllib.parse.quote(question)
     safe_system = urllib.parse.quote(system_prompt)
     
-    # Using explicit fast model query to bypass server lag
-    url = f"https://text.pollinations.ai/{safe_question}?system={safe_system}&model=openai&cache=false"
+    # Ordered list of highly resilient models to loop through if one hits 429 or fails
+    models = ["mistral", "llama", "openai"]
     
-    try:
-        response = requests.get(url, timeout=15)
-        if response.status_code == 200:
-            return response.text.strip()
-        else:
-            return f"Server is busy (Status {response.status_code}). Please try again."
-    except requests.exceptions.RequestException:
-        return "Network connection issue. Please check your internet or retry."
+    for model in models:
+        url = f"https://text.pollinations.ai/{safe_question}?system={safe_system}&model={model}&cache=false"
+        try:
+            response = requests.get(url, timeout=12)
+            if response.status_code == 200 and response.text.strip():
+                # Strip out any lingering markdown bold tags for clean terminal printing
+                return response.text.strip().replace("**", "").replace("*", "")
+        except:
+            continue
+            
+    return "All AI inference lanes are packed. Please resend your prompt in a few seconds."
 
 def get_battery_metrics():
     """Pulls current charging, voltage, and health attributes via Termux JSON blocks."""
     try:
         raw_output = subprocess.check_output(["termux-battery-status"], text=True)
         json_data = json.loads(raw_output)
-        return f"Battery capacity is at {json_data['percentage']}% and status is {json_data['status']}."
+        return f"Your device battery capacity is at {json_data['percentage']}% and status is {json_data['status']}."
     except:
-        return "Unable to parse device battery attributes."
+        return "Unable to interface with local Termux battery subsystem."
 
 def get_wifi_metrics():
     """Extracts internal wireless local area network configurations."""
@@ -102,10 +105,10 @@ def get_wifi_metrics():
         raw_output = subprocess.check_output(["termux-wifi-connectioninfo"], text=True)
         json_data = json.loads(raw_output)
         if json_data.get("supplicant_state") == "COMPLETED":
-            return f"Connected to Wi-Fi. Network SSID: {json_data.get('ssid', 'Hidden')}."
-        return "Your device is not connected to any active Wi-Fi networks."
+            return f"Connected to Wi-Fi. Network SSID name is {json_data.get('ssid', 'Hidden')}."
+        return "Your device is not connected to any active wireless networks."
     except:
-        return "Hardware interface failed to read Wi-Fi configurations."
+        return "Hardware interface failed to read Wi-Fi network configurations."
 
 def load_stored_profile():
     """Loads saved profiles directly from persistent disk configuration space."""
@@ -124,7 +127,7 @@ def save_profile_to_disk(gender):
         json.dump(profile_data, file_stream, indent=4)
 
 def run_onboarding_setup(input_mode):
-    """Onboarding setup optimized for quick start."""
+    """Onboarding setup optimized for English quick start."""
     print(f"{YELLOW}[Setup Wizard Initialization]{RESET}")
     
     respond("Please state or type your gender. Enter M for Male or F for Female.", input_mode)
@@ -180,30 +183,30 @@ if __name__ == "__main__":
         cmd_normalized = cmd_string.lower().strip()
 
         # ========================================================
-        # SYSTEM OPERATIONS INTERFACES (Termux APIs)
+        # SYSTEM OPERATIONS INTERFACES (Substrings Match Fix)
         # ========================================================
-        if cmd_normalized in ["battery", "status"]:
+        if "battery" in cmd_normalized or "percentage" in cmd_normalized:
             respond(get_battery_metrics(), selected_mode)
             
-        elif cmd_normalized in ["wifi", "network"]:
+        elif "wifi" in cmd_normalized or "network" in cmd_normalized:
             respond(get_wifi_metrics(), selected_mode)
         
-        elif cmd_normalized in ["torch on", "flashlight on"]:
+        elif "torch on" in cmd_normalized or "flashlight on" in cmd_normalized or "light on" in cmd_normalized:
             subprocess.run(["termux-torch", "on"])
             respond("Flashlight turned on.", selected_mode)
             
-        elif cmd_normalized in ["torch off", "flashlight off"]:
+        elif "torch off" in cmd_normalized or "flashlight off" in cmd_normalized or "light off" in cmd_normalized:
             subprocess.run(["termux-torch", "off"])
             respond("Flashlight turned off.", selected_mode)
 
-        elif cmd_normalized == "clipboard":
+        elif "clipboard" in cmd_normalized:
             try:
                 clipboard_text = subprocess.check_output(["termux-clipboard-get"], text=True).strip()
                 respond(f"Clipboard content: {clipboard_text if clipboard_text else 'Empty'}", selected_mode)
             except:
                 respond("Unable to interface with device clipboard.", selected_mode)
                 
-        elif cmd_normalized in ["vibrate", "buzz"]:
+        elif "vibrate" in cmd_normalized or "buzz" in cmd_normalized:
             respond("Vibrating system hardware.", selected_mode)
             subprocess.run(["termux-vibrate", "-d", "1000"])
 
@@ -212,7 +215,7 @@ if __name__ == "__main__":
             break
 
         # ========================================================
-        # STABLE CORE AI INFERENCE
+        # STABLE CORE AI INFERENCE (Multi-lane)
         # ========================================================
         else:
             ai_inference_response = query_optimized_ai(cmd_string, user_gender)
