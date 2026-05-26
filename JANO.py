@@ -83,39 +83,27 @@ def get_user_input(input_mode):
             return "exit"
 
 def query_optimized_ai(question, gender, language):
-    """Forwards prompts to the high-speed inference engine using reliable POST method with GET fallback."""
-    url = "https://text.pollinations.ai/openai"
-    payload = {
-        "model": "openai",
-        "messages": [
-            {
-                "role": "system", 
-                "content": f"You are JANO_AI, a highly smart assistant developed by Yoseph Alganeh. User is {gender}. Language is {language}. Crucial Rule: If user speaks in Amharic, respond strictly in Amharic. If in English, respond in English. Keep it direct and fast."
-            },
-            {"role": "user", "content": question}
-        ]
-    }
+    """Highly stable AI GET Request using Pollinations correct format."""
+    # Custom system instructions
+    system_prompt = f"You are JANO_AI, a highly smart assistant developed by Yoseph Alganeh. The User is {gender}. The Language is {language}. Crucial Rule: Always reply in the exact language the user used. Keep answers direct, accurate, and fast."
+    
+    # URL Encoding for safety
+    safe_question = urllib.parse.quote(question)
+    safe_system = urllib.parse.quote(system_prompt)
+    
+    # The officially supported Pollinations GET endpoint
+    url = f"https://text.pollinations.ai/{safe_question}?system={safe_system}"
     
     try:
-        # Method 1: Robust JSON POST Request
-        response = requests.post(url, json=payload, timeout=12)
+        response = requests.get(url, timeout=20)
         if response.status_code == 200:
-            res_data = response.json()
-            return res_data['choices'][0]['message']['content'].strip()
-    except:
-        pass
-        
-    try:
-        # Method 2: Smart GET Fallback if POST fails
-        clean_prompt = f"[User: {gender}, Lang: {language}] {question}"
-        backup_url = f"https://text.pollinations.ai/{urllib.parse.quote(clean_prompt)}"
-        backup_res = requests.get(backup_url, timeout=10)
-        if backup_res.status_code == 200:
-            return backup_res.text.strip()
-    except:
-        pass
-
-    return "ይቅርታ፣ የኔትወርክ መቆራረጥ አጋጥሞኛል። እባክህ እንደገና ጠይቀኝ።"
+            return response.text.strip()
+        else:
+            print(f"{RED}[Debug Error]: API returned status {response.status_code}{RESET}")
+            return "ይቅርታ፣ አሁን ላይ የ AI ሰርቨሩ ስራ በዝቶበታል። እባክህ ትንሽ ቆይተህ ሞክር።"
+    except Exception as e:
+        print(f"{RED}[Network Error]: {e}{RESET}")
+        return "ይቅርታ፣ ኢንተርኔት ወይም ሰርቨር አልሰራ እያለ ነው።"
 
 def get_battery_metrics():
     """Pulls current charging, voltage, and health attributes via Termux JSON blocks."""
