@@ -19,10 +19,9 @@ RESET = "\033[0m"
 
 COLORS = [RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE]
 CONFIG_FILE = "config.json"
-selected_mode = "typing"  # Global mode selector
 
 def display_dynamic_banner():
-    """Generates and displays stylized, randomized terminal arts inspired by msfconsole."""
+    """Generates and displays stylized, randomized terminal arts."""
     os.system("clear")
     primary_color = random.choice(COLORS)
     accent_color = random.choice([c for c in COLORS if c != primary_color])
@@ -34,30 +33,15 @@ def display_dynamic_banner():
        ██║   ██╔══██║██║╚██╗██║██║   ██║     ██╔══██║██║
        ██║   ██║  ██║██║ ╚████║╚██████╔╝     ██║  ██║██║
        ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝      ╚═╝  ╚═╝╚═╝{RESET}"""
-
-    banner_snake = f"""
-{primary_color}       _  _____ _   _  ___      _     ___ 
-    _ | |/ _   | \ | |/ _ \    /_\   |_ _|
-   | || | |_|  |  \| | |_| |  / _ \   | | 
-    \__/ \_____|_| \_|\___/  /_/ \_\ |___|{RESET}"""
-
-    banner_mouse = f"""
-{accent_color}       (q\-/-/)  {primary_color}   ___   _   _  _  ___        _   ___ 
-{accent_color}        _ 4 4    {primary_color}  |_ _| /_\ | \| |/ _ \      /_\ |_ _|
-{accent_color}       (_v  _)   {primary_color}   | | / _ \| .  | |_| |    / _ \ | | 
-{accent_color}       (( _ )_   {primary_color}  |___/_/ \_\_|\_|\___/    /_/ \_\___|
-{accent_color}       (     )_) {RESET}"""
-
-    selected_art = random.choice([banner_block, banner_snake, banner_mouse])
-    print(selected_art)
+    print(banner_block)
     print(f"{accent_color}========================================================")
     print(f"                ENGINE DEVELOPED BY YOSEPH ALGANEH     ")
     print(f"========================================================{RESET}\n")
 
-def deliver_response(text):
-    """Smart output router: Prints always, speaks ONLY if Voice Mode is active."""
+def respond(text, input_mode):
+    """Handles responses smartly: Speaks ONLY in voice mode, Prints in both."""
     print(f"\n{CYAN}[JANO_AI]: {text}{RESET}")
-    if selected_mode == "voice":
+    if input_mode == "voice":
         subprocess.run(["termux-tts-speak", text])
 
 def listen_voice():
@@ -73,9 +57,9 @@ def listen_voice():
     except:
         return None
 
-def get_user_input():
+def get_user_input(input_mode):
     """Consolidates inputs across system terminals dynamically depending on mode."""
-    if selected_mode == "voice":
+    if input_mode == "voice":
         return listen_voice()
     else:
         try:
@@ -85,37 +69,32 @@ def get_user_input():
             return "exit"
 
 def query_optimized_ai(question, gender):
-    """Lightweight and robust GET request tailored to prevent Pollinations backend timeouts."""
-    system_prompt = f"You are JANO_AI, an advanced AI assistant created by Yoseph Alganeh. The user gender is {gender}. Respond strictly in English. Keep answers highly precise, fast, and technical."
+    """Highly stable, ultra-fast English-only AI inference."""
+    system_prompt = f"You are JANO_AI, a highly smart assistant developed by Yoseph Alganeh. The User gender is {gender}. Crucial Rule: Always respond strictly in English. Keep answers direct, concise, and ultra-fast. Do not use bold markdown asterisks."
     
     safe_question = urllib.parse.quote(question)
     safe_system = urllib.parse.quote(system_prompt)
     
-    # Using specific model parameter to ensure faster server processing speeds
-    url = f"https://text.pollinations.ai/{safe_question}?system={safe_system}&model=openai"
+    # Using explicit fast model query to bypass server lag
+    url = f"https://text.pollinations.ai/{safe_question}?system={safe_system}&model=openai&cache=false"
     
     try:
         response = requests.get(url, timeout=15)
         if response.status_code == 200:
             return response.text.strip()
         else:
-            print(f"{RED}[Server Error Code: {response.status_code}]{RESET}")
-            return "Server is currently unresponsive. Please try your request again."
-    except requests.exceptions.Timeout:
-        print(f"{RED}[Connection Timeout]: The AI server took too long to respond.{RESET}")
-        return "Request timed out. Please check your internet stability and try again."
-    except Exception as e:
-        print(f"{RED}[Network Error]: {e}{RESET}")
-        return "Network connection issue detected. Unable to reach the AI engine."
+            return f"Server is busy (Status {response.status_code}). Please try again."
+    except requests.exceptions.RequestException:
+        return "Network connection issue. Please check your internet or retry."
 
 def get_battery_metrics():
     """Pulls current charging, voltage, and health attributes via Termux JSON blocks."""
     try:
         raw_output = subprocess.check_output(["termux-battery-status"], text=True)
         json_data = json.loads(raw_output)
-        return f"Battery level is at {json_data['percentage']}% and status is {json_data['status']}."
+        return f"Battery capacity is at {json_data['percentage']}% and status is {json_data['status']}."
     except:
-        return "Failed to retrieve device battery statistics."
+        return "Unable to parse device battery attributes."
 
 def get_wifi_metrics():
     """Extracts internal wireless local area network configurations."""
@@ -123,10 +102,10 @@ def get_wifi_metrics():
         raw_output = subprocess.check_output(["termux-wifi-connectioninfo"], text=True)
         json_data = json.loads(raw_output)
         if json_data.get("supplicant_state") == "COMPLETED":
-            return f"Connected to Wi-Fi SSID: {json_data.get('ssid', 'Hidden')}."
-        return "Device is not connected to any active Wi-Fi networks."
+            return f"Connected to Wi-Fi. Network SSID: {json_data.get('ssid', 'Hidden')}."
+        return "Your device is not connected to any active Wi-Fi networks."
     except:
-        return "Failed to interface with Wi-Fi hardware configurations."
+        return "Hardware interface failed to read Wi-Fi configurations."
 
 def load_stored_profile():
     """Loads saved profiles directly from persistent disk configuration space."""
@@ -140,18 +119,18 @@ def load_stored_profile():
 
 def save_profile_to_disk(gender):
     """Writes persistent profile configurations to local storage file."""
-    profile_data = {"gender": gender}
+    profile_data = {"gender": gender, "language": "English"}
     with open(CONFIG_FILE, 'w') as file_stream:
         json.dump(profile_data, file_stream, indent=4)
 
-def run_onboarding_setup():
-    """Quick onboarding script to determine user configuration parameters."""
+def run_onboarding_setup(input_mode):
+    """Onboarding setup optimized for quick start."""
     print(f"{YELLOW}[Setup Wizard Initialization]{RESET}")
-    deliver_response("Please state or type your gender. Enter M for Male or F for Female.")
     
-    gender_identity = "User"
+    respond("Please state or type your gender. Enter M for Male or F for Female.", input_mode)
+    gender_identity = "Male"
     while True:
-        raw_ans = get_user_input()
+        raw_ans = get_user_input(input_mode)
         if raw_ans:
             val = raw_ans.lower().strip()
             if val in ["m", "male", "mail", "man", "boy"]:
@@ -160,42 +139,41 @@ def run_onboarding_setup():
             elif val in ["f", "female", "girl", "woman"]:
                 gender_identity = "Female"
                 break
-        print(f"{RED}Invalid entry. Please try stating or typing your gender again.{RESET}")
+        print(f"{RED}Invalid input. Please enter M or F.{RESET}")
 
     save_profile_to_disk(gender_identity)
-    deliver_response("User profile configuration saved successfully.")
+    respond("User setup configuration saved successfully.", input_mode)
     return gender_identity
 
 if __name__ == "__main__":
     display_dynamic_banner()
     
     print(f"{YELLOW}Select Operational Input Interface Mode:{RESET}")
-    print(f" [{GREEN}T{RESET}] Typing Keyboard Interface Mode (Silent)")
-    print(f" [{GREEN}V{RESET}] Voice Speech Interface Mode (Audio Output)")
+    print(f" [{GREEN}T{RESET}] Typing Keyboard Interface Mode")
+    print(f" [{GREEN}V{RESET}] Voice Speech Interface Mode")
     
+    selected_mode = "typing"
     while True:
         mode_token = input(f"\n{BLUE}Select Interface Mode [T/V]: {RESET}").lower().strip()
         if mode_token in ["t", "typing"]:
             selected_mode = "typing"
-            print(f"{GREEN}[Typing Mode Activated]: System will remain silent.{RESET}")
             break
         elif mode_token in ["v", "voice"]:
             selected_mode = "voice"
-            print(f"{GREEN}[Voice Mode Activated]: System audio output enabled.{RESET}")
             break
-        print(f"{RED}Error: Choice not recognized. Enter 'T' or 'V'.{RESET}")
+        print(f"{RED}Error: Code not recognized. Enter 'T' or 'V'.{RESET}")
 
     stored_profile = load_stored_profile()
     if stored_profile:
-        user_gender = stored_profile.get("gender", "User")
+        user_gender = stored_profile.get("gender", "Male")
         print(f"{GREEN}[Profile Loaded]: Gender={user_gender} | Language=English{RESET}")
     else:
-        user_gender = run_onboarding_setup()
+        user_gender = run_onboarding_setup(selected_mode)
 
-    deliver_response("JANO AI Online. Ready for your commands.")
+    respond("JANO AI Online. Ready for your commands.", selected_mode)
 
     while True:
-        cmd_string = get_user_input()
+        cmd_string = get_user_input(selected_mode)
         if not cmd_string:
             continue
 
@@ -205,39 +183,39 @@ if __name__ == "__main__":
         # SYSTEM OPERATIONS INTERFACES (Termux APIs)
         # ========================================================
         if cmd_normalized in ["battery", "status"]:
-            deliver_response(get_battery_metrics())
+            respond(get_battery_metrics(), selected_mode)
             
         elif cmd_normalized in ["wifi", "network"]:
-            deliver_response(get_wifi_metrics())
+            respond(get_wifi_metrics(), selected_mode)
         
         elif cmd_normalized in ["torch on", "flashlight on"]:
             subprocess.run(["termux-torch", "on"])
-            deliver_response("Flashlight turned on.")
+            respond("Flashlight turned on.", selected_mode)
             
         elif cmd_normalized in ["torch off", "flashlight off"]:
             subprocess.run(["termux-torch", "off"])
-            deliver_response("Flashlight turned off.")
+            respond("Flashlight turned off.", selected_mode)
 
         elif cmd_normalized == "clipboard":
             try:
                 clipboard_text = subprocess.check_output(["termux-clipboard-get"], text=True).strip()
-                deliver_response(f"Clipboard content: {clipboard_text if clipboard_text else 'Empty'}")
+                respond(f"Clipboard content: {clipboard_text if clipboard_text else 'Empty'}", selected_mode)
             except:
-                deliver_response("Unable to access device clipboard.")
+                respond("Unable to interface with device clipboard.", selected_mode)
                 
-        elif cmd_normalized in ["vibrate", "alert"]:
-            deliver_response("Vibrating hardware system.")
+        elif cmd_normalized in ["vibrate", "buzz"]:
+            respond("Vibrating system hardware.", selected_mode)
             subprocess.run(["termux-vibrate", "-d", "1000"])
 
         elif cmd_normalized in ["stop", "exit", "quit"]:
-            deliver_response("Shutting down JANO AI. Goodbye!")
+            respond("Shutting down JANO AI. Goodbye!", selected_mode)
             break
 
         # ========================================================
-        # STABLE CORE AI INFERENCE FASTRUN
+        # STABLE CORE AI INFERENCE
         # ========================================================
         else:
             ai_inference_response = query_optimized_ai(cmd_string, user_gender)
-            deliver_response(ai_inference_response)
+            respond(ai_inference_response, selected_mode)
         
         time.sleep(0.1)
